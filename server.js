@@ -8,17 +8,17 @@ const app = express();
 // Middlewares
 app.use(express.json());
 app.use(cors());
-app.use(express.static('public')); // for index.html
+app.use(express.static('public'));
 
 // ================= DB CONNECT =================
 mongoose.connect(process.env.MONGO_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(() => console.log("✅ DB Connected"))
-.catch(err => console.log("❌ DB Error:", err));
+.then(() => console.log("DB Connected"))
+.catch(err => console.log("DB Error:", err));
 
-// ================= MODELS =================
+// ================= MODEL =================
 const Order = mongoose.model('Order', {
   user: String,
   service: String,
@@ -42,7 +42,7 @@ app.post('/order', async (req, res) => {
   }
 });
 
-// Get user orders
+// Get all user orders
 app.get('/my-orders', async (req, res) => {
   try {
     const orders = await Order.find();
@@ -87,5 +87,5 @@ app.delete('/admin/delete-order/:id', async (req, res) => {
 
 // ================= SERVER =================
 app.listen(process.env.PORT || 3000, () => {
-  console.log("🚀 Server running");
+  console.log("Server running");
 });
