@@ -1,141 +1,91 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
 const app = express();
+
+// Middlewares
 app.use(express.json());
 app.use(cors());
-app.use(express.static('public')); // VERY IMPORTANT
+app.use(express.static('public')); // for index.html
 
-// DB connect
-mongoose.connect(process.env.MONGO_URL)
-.then(()=>console.log('DB Connected'));
+// ================= DB CONNECT =================
+mongoose.connect(process.env.MONGO_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("✅ DB Connected"))
+.catch(err => console.log("❌ DB Error:", err));
 
-// Models
-const User = mongoose.model('User', new mongoose.Schema({
-  username:String,
-  password:String,
-  balance:{type:Number,default:0},
-  isAdmin:{type:Boolean,default:false}
-}));
-
-const Order = mongoose.model('Order', new mongoose.Schema({
-  user:String,
-  service:String,
-  price:Number,
-  link:String,
-  status:{type:String,default:'Pending'}
-}));
-
-// Auth middleware
-function auth(req,res,next){
-  try{
-    req.user = jwt.verify(req.headers.authorization, process.env.JWT_SECRET);
-    next();
-  }catch{
-    res.status(401).json({msg:'Unauthorized'});
-  }
-}
-
-// Register
-app.post('/register', async (req,res)=>{
-  const hash = await bcrypt.hash(req.body.password,10);
-  await User.create({username:req.body.username,password:hash});
-  res.json({msg:'Registered'});
+// ================= MODELS =================
+const Order = mongoose.model('Order', {
+  user: String,
+  service: String,
+  price: Number,
+  link: String
 });
 
-// Login
-app.post('/login', async (req,res)=>{
-  const user = await User.findOne({username:req.body.username});
-  if(!user) return res.json({msg:'User not found'});
-
-  const ok = await bcrypt.compare(req.body.password,user.password);
-  if(!ok) return res.json({msg:'Wrong password'});
-
-  const token = jwt.sign({id:user._id}, process.env.JWT_SECRET);
-  res.json({token});
-});
-
-// Add balance (manual test)
-app.post('/add-balance', auth, async (req,res)=>{
-  const user = await User.findById(req.user.id);
-  user.balance += req.body.amount;
-  await user.save();
-  res.json({msg:'Balance added',balance:user.balance});
-});
+// ================= USER ROUTES =================
 
 // Place order
-app.post('/buy', auth, async (req,res)=>{
-  const user = await User.findById(req.user.id);
+app.post('/order', async (req, res) => {
+  try {
+    const { user, service, price, link } = req.body;
 
-  if(user.balance < req.body.price){
-    return res.json({msg:'Low balance'});
+    const newOrder = new Order({ user, service, price, link });
+    await newOrder.save();
+
+    res.json({ msg: "Order placed" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  user.balance -= req.body.price;
-  await user.save();
-
-  await Order.create({
-    user:user.username,
-    service:req.body.service,
-    price:req.body.price,
-    link:req.body.link
-  });
-
-  res.json({msg:'Order placed'});
 });
 
-// Get orders
-app.get('/my-orders', auth, async (req,res)=>{
-  const user = await User.findById(req.user.id);
-  const orders = await Order.find({user:user.username});
-  res.json(orders);
+// Get user orders
+app.get('/my-orders', async (req, res) => {
+  try {
+    const orders = await Order.find();
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
-// ================= ADMIN PANEL =================
 
-// Admin Login
+// ================= ADMIN ROUTES =================
+
+// Admin login
 app.post('/admin-login', (req, res) => {
-    const { username, password } = req.body;
+  const { username, password } = req.body;
 
-    if (username === "admin" && password === "123456") {
-        return res.json({ success: true, message: "Login success" });
-    } else {
-        return res.json({ success: false, message: "Invalid credentials" });
-    }
+  if (username === "admin" && password === "123456") {
+    return res.json({ success: true });
+  } else {
+    return res.json({ success: false });
+  }
 });
 
-// Get all users
-app.get('/admin/users', async (req, res) => {
-    try {
-        const users = await User.find();
-        res.json(users);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Get all orders
+// Get all orders (admin)
 app.get('/admin/orders', async (req, res) => {
-    try {
-        const orders = await Order.find();
-        res.json(orders);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const orders = await Order.find();
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Delete order
+// Delete order (admin)
 app.delete('/admin/delete-order/:id', async (req, res) => {
-    try {
-        await Order.findByIdAndDelete(req.params.id);
-        res.json({ message: "Order deleted" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    await Order.findByIdAndDelete(req.params.id);
+    res.json({ message: "Order deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
+// ================= SERVER =================
 app.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
+  console.log("🚀 Server running");
 });
