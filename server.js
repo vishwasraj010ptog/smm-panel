@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.static('public')); // VERY IMPORTANT
 
 // DB connect
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URL)
 .then(()=>console.log('DB Connected'));
 
 // Models
