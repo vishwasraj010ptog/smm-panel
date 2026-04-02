@@ -94,7 +94,48 @@ app.get('/my-orders', auth, async (req,res)=>{
   const orders = await Order.find({user:user.username});
   res.json(orders);
 });
+// ================= ADMIN PANEL =================
 
+// Admin Login
+app.post('/admin-login', (req, res) => {
+    const { username, password } = req.body;
+
+    if (username === "admin" && password === "123456") {
+        return res.json({ success: true, message: "Login success" });
+    } else {
+        return res.json({ success: false, message: "Invalid credentials" });
+    }
+});
+
+// Get all users
+app.get('/admin/users', async (req, res) => {
+    try {
+        const users = await User.find();
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get all orders
+app.get('/admin/orders', async (req, res) => {
+    try {
+        const orders = await Order.find();
+        res.json(orders);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete order
+app.delete('/admin/delete-order/:id', async (req, res) => {
+    try {
+        await Order.findByIdAndDelete(req.params.id);
+        res.json({ message: "Order deleted" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.listen(process.env.PORT || 3000, () => {
   console.log("Server running");
 });
