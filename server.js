@@ -95,4 +95,6 @@ app.get('/my-orders', auth, async (req,res)=>{
   res.json(orders);
 });
 
-app.listen(3000,()=>console.log('Server running on 3000'));
+app.listen(process.env.PORT || 3000, () => {
+  console.log("Server running");
+});
