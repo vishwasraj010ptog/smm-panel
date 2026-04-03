@@ -1,95 +1,28 @@
-require('dotenv').config();
-
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
+import express from "express";
+import mongoose from "mongoose";
 
 const app = express();
 
-// Middlewares
 app.use(express.json());
-app.use(cors());
-app.use(express.static('public'));
 
-// ================= DB CONNECT =================
-mongoose.connect(process.env.MONGO_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log("DB Connected"))
-.catch(err => console.log("DB Error:", err));
-
-// ================= MODELS =================
-const orderSchema = new mongoose.Schema({
-  user: String,
-  service: String,
-  price: Number,
-  link: String
-});
-
-const Order = mongoose.model('Order', orderSchema);
-
-// ================= ROUTES =================
-
-// Test route
-app.get('/', (req, res) => {
-  res.send("Server is running");
-});
-
-// Create order
-app.post('/order', async (req, res) => {
+const connectDB = async () => {
   try {
-    const { user, service, price, link } = req.body;
-
-    const newOrder = new Order({
-      user,
-      service,
-      price,
-      link
-    });
-
-    await newOrder.save();
-
-    res.json({ message: "Order placed" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    await mongoose.connect(process.env.MONGO_URL);
+    console.log("MongoDB Connected ✅");
+  } catch (error) {
+    console.error("MongoDB Error ❌:", error.message);
+    process.exit(1);
   }
+};
+
+connectDB();
+
+app.get("/", (req, res) => {
+  res.send("API Running 🚀");
 });
 
-// ================= ADMIN =================
+const PORT = process.env.PORT || 5000;
 
-// Admin login (simple)
-app.post('/admin-login', (req, res) => {
-  const { username, password } = req.body;
-
-  if (username === "admin" && password === "123456") {
-    return res.json({ success: true });
-  } else {
-    return res.json({ success: false });
-  }
-});
-
-// Get all orders
-app.get('/admin/orders', async (req, res) => {
-  try {
-    const orders = await Order.find();
-    res.json(orders);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Delete order
-app.delete('/admin/delete-order/:id', async (req, res) => {
-  try {
-    await Order.findByIdAndDelete(req.params.id);
-    res.json({ message: "Order deleted" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ================= START SERVER =================
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT} 🚀`);
 });
